@@ -23,28 +23,42 @@ class Graph:
 
     def add_node(self, node: Node) -> None:
         # TODO
-        raise NotImplementedError
+        if node not in self.adjacency:
+            self.adjacency[node] = []
 
     def add_edge(self, a: Node, b: Node, weight: float) -> None:
         """Add an undirected edge in both directions."""
         # TODO
-        raise NotImplementedError
+        if weight < 0:
+            raise ValueError("Edge weights must be nonnegative.")
 
+        self.add_node(a)
+        self.add_node(b)
+
+        self.adjacency[a].append((b, weight))
+        self.adjacency[b].append((a, weight))
+        
     def close_edge(self, a: Node, b: Node) -> None:
         """Mark the edge between a and b as closed (does not remove it from adjacency)."""
         # TODO
-        raise NotImplementedError
+        self.closed_edges.add(frozenset((a, b)))
 
     def reopen_edge(self, a: Node, b: Node) -> None:
         """Reopen the connection between a and b."""
         # TODO
-        raise NotImplementedError
+        self.closed_edges.discard(frozenset((a,b)))
 
     def neighbors(self, node: Node) -> List[Tuple[Node, float]]:
         """Return (neighbor, weight) pairs for edges that are currently open."""
         # TODO
-        raise NotImplementedError
+        if node not in self.adjacency:
+            return []
 
+        return [
+            (neighbor, weight)
+            for neighbor, weight in self.adjacency[node]
+            if frozenset((node, neighbor)) not in self.closed_edges
+        ]
 
 def dijkstra(graph: Graph, start: Node, end: Node) -> Optional[Tuple[float, List[Node]]]:
     """
@@ -55,8 +69,59 @@ def dijkstra(graph: Graph, start: Node, end: Node) -> Optional[Tuple[float, List
     for that node.
     """
     # TODO
-    raise NotImplementedError
+    if start not in graph.adjacency or end not in graph.adjacency:
+        return None
 
+    if start == end:
+        return(0, [start])
+
+    distances: Dict[Node, float] = {
+        node: float("inf")
+        for node in graph.adjacency
+    }
+
+    parents: Dict[Node, Optional[Node]] = {
+        node: None
+        for node in graph.adjacency
+    }
+
+    distances[start] = 0
+
+    heap: List[Tuple[float, Node]] = [(0, start)]
+
+    while heap:
+        current_distance, current = heapq.heappop(heap)
+
+        if current_distance != distances[current]:
+            continue
+
+        if current == end:
+            break
+
+        for neighbor, weight in graph.neighbors(current):
+            new_distance = current_distance + weight
+
+            if new_distance < distances[neighbor]:
+                distances[neighbor] = new_distance 
+                parents[neighbor] = current
+
+                heapq.heappush(
+                    heap,
+                    (new_distance, neighbor)
+                )
+    if distances[end] == float("inf"):
+        return None
+
+    path: List[Node] = []
+    current: Optional[Node] = end
+
+    while current is not None:
+        path.append(current)
+        current = parents[current]
+
+    path.reverse()
+
+    return (distances[end], path)
 
 def campus_route(map_graph: Graph, src: Node, dest: Node) -> Optional[Tuple[float, List[Node]]]:
     """
@@ -65,4 +130,4 @@ def campus_route(map_graph: Graph, src: Node, dest: Node) -> Optional[Tuple[floa
     return the shortest route from `src` to `dest`.
     """
     # TODO
-    raise NotImplementedError
+    return dijkstra(map_graph, src, dest)
